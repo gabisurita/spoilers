@@ -1,3 +1,6 @@
+*.sw*
 
+examples/*/target
+spoilers_derive/target/
 /target/
 **/*.rs.bk

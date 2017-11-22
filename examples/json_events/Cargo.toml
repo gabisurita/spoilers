@@ -1,11 +1,7 @@
 [package]
-name = "spoilers"
+name = "json_events"
 version = "0.1.0"
 authors = ["Gabriela Surita <gabsurita@gmail.com>"]
-
-[lib]
-name = "spoilers"
-
 
 [dependencies]
 chrono = { version="*", features = ["serde"] }
@@ -20,3 +16,5 @@ rocket_codegen = { git = "https://github.com/SergioBenitez/Rocket" }
 serde = "*"
 serde_derive = "*"
 serde_json = "*"
+spoilers = { path = "../../" }
+spoilers_derive = { path = "../../spoilers_derive" }

@@ -1,0 +1,12 @@
+[package]
+name = "spoilers_derive"
+version = "0.1.0"
+authors = ["Gabriela Surita <gabsurita@gmail.com>"]
+
+[lib]
+proc-macro = true
+
+[dependencies]
+spoilers = { path = "../" }
+quote = "*"
+syn = "*"
