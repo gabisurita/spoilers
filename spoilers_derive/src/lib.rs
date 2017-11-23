@@ -1,4 +1,5 @@
 #![feature(attr_literals)]
+#![recursion_limit="128"]
 
 #[macro_use]
 extern crate quote;
@@ -29,6 +30,7 @@ fn parse_derive_attibutes<'a>(ast: syn::DeriveInput) -> HashMap<String, syn::Met
 struct MetaResourceConfig {
     pub ast: syn::DeriveInput,
 }
+
 
 impl MetaResourceConfig {
     pub fn new(input: syn::DeriveInput) -> MetaResourceConfig {
@@ -74,11 +76,15 @@ impl MetaResourceConfig {
     }
 
     pub fn model_name(&self) -> syn::Ident {
-        syn::Ident::new(format!("{}", self.struct_name()))
+        syn::Ident::new(format!("{}Model", self.struct_name()))
     }
 
     pub fn form_name(&self) -> syn::Ident {
         syn::Ident::new(format!("{}Form", self.struct_name()))
+    }
+
+    pub fn filter_name(&self) -> syn::Ident {
+        syn::Ident::new(format!("{}Filter", self.struct_name()))
     }
 
     pub fn method_name(&self, verb: &str) -> syn::Ident {
@@ -118,12 +124,43 @@ fn impl_resource(ast: &syn::DeriveInput) -> quote::Tokens {
     let struct_name = config.struct_name();
     let model_name = config.model_name();
     let form_name = config.form_name();
-
+    let filter_name = config.filter_name();
+    let table_name = config.table_name().as_ref().to_owned();
     let endpoint = config.endpoint().to_owned();
-    let model = config.ast.body;
 
-    println!("{:?}", model);
+    let model_fields: Vec<quote::Tokens> = config.fields().iter().map(|field| {
+        let ident = &field.ident;
+        let ty = &field.ty;
+        quote!{
+            pub #ident: #ty,
+        }
+    }).collect();
+    let form_fields: Vec<quote::Tokens> = config.fields().iter().map(|field| {
+        let ident = &field.ident;
+        let ty = &field.ty;
+        quote!{
+            pub #ident: #ty,
+        }
+    }).collect();
+
+    println!("{:?}", form_fields);
     quote! {
+        #[derive(Queryable, Serialize, Deserialize)]
+        pub struct #model_name {
+            pub id: i32,
+            #(#model_fields)*
+        }
+
+        #[derive(Insertable, Serialize, Deserialize)]
+        #[table_name=#table_name]
+        pub struct #form_name {
+            #(#form_fields)*
+        }
+
+        #[derive(Serialize, Deserialize)]
+        pub struct #filter_name {
+        }
+
         impl Resource for #struct_name {
             const ENDPOINT: &'static str = #endpoint;
         }
@@ -132,7 +169,19 @@ fn impl_resource(ast: &syn::DeriveInput) -> quote::Tokens {
 
 
 fn impl_collection_get(ast: &syn::DeriveInput) -> quote::Tokens {
+    let config = MetaResourceConfig::new(ast.clone());
+    let endpoint = config.endpoint().to_owned();
+    let method_name = config.method_name("get");
+    let struct_name = config.struct_name();
+    let filter_name = config.filter_name();
+    let model_name = config.model_name();
+    let table_name = config.table_name();
     quote! {
+        #[get(#endpoint, format = "application/json")]
+        fn #method_name(context: Context) -> JsonValue {
+            let data = #struct_name::list(#filter_name {}, &*context);
+            JsonValue(json!({"data": data.expect("error")}))
+        }
     }
 }
 
@@ -141,18 +190,58 @@ fn impl_collection_create(ast: &syn::DeriveInput) -> quote::Tokens {
     let config = MetaResourceConfig::new(ast.clone());
     let endpoint = config.endpoint().to_owned();
     let method_name = config.method_name("create");
+    let struct_name = config.struct_name();
     let form_name = config.form_name();
     let model_name = config.model_name();
     let table_name = config.table_name();
 
     quote! {
         #[post(#endpoint, format = "application/json", data = "<message>")]
-        fn #method_name(message: Json<Value>, conn: DbConn) -> JsonValue {
+        fn #method_name(message: Json<Value>, context: Context) -> JsonValue {
             let new: #form_name = serde_json::from_value(message.0).unwrap();
-            let created: #model_name = diesel::insert(&new).into(#table_name::table)
-                .get_result(&*conn)
-                .expect("Error saving new post");
-            JsonValue(json!({"data": created}))
+            let created = #struct_name::create(new, &*context);
+            JsonValue(json!({"data": created.expect("error")}))
+        }
+    }
+}
+
+
+#[proc_macro_derive(PgStorageBackend, attributes(endpoint))]
+pub fn derive_pg_storage_backend(input: TokenStream) -> TokenStream {
+    impl_pg_storage_backend(&parse_derive_input(input)).parse().unwrap()
+}
+
+
+fn impl_pg_storage_backend(ast: &syn::DeriveInput) -> quote::Tokens {
+    let config = MetaResourceConfig::new(ast.clone());
+    let struct_name = config.struct_name();
+    let form_name = config.form_name();
+    let model_name = config.model_name();
+    let filter_name = config.filter_name();
+    let table_name = config.table_name();
+
+    quote! {
+
+        impl spoilers::storage::StorageBackend<#form_name,#model_name,#filter_name,PgConnection> for #struct_name {
+
+            fn create<'a>(form: #form_name, conn: &'a PgConnection) ->
+                    Result<#model_name, StorageBackendError> {
+
+                let created: #model_name = diesel::insert(&form).into(#table_name::table)
+                    .get_result(conn)
+                    .expect("Error saving new post");
+                Ok(created)
+            }
+
+            fn list<'a>(filters: #filter_name, conn: &'a PgConnection) ->
+                    Result<Vec<#model_name>, StorageBackendError> {
+
+                use #table_name::dsl::*;
+                let results = #table_name.limit(10)
+                    .load::<#model_name>(&*conn)
+                    .expect("Error loading events");
+                Ok(results)
+            }
         }
     }
 }

@@ -37,23 +37,14 @@ table! {
 
 // Declare your models here
 
-#[derive(Queryable, Serialize, Deserialize, Resource, CollectionGet, CollectionCreate)]
+#[derive(Resource, PgStorageBackend, CollectionGet, CollectionCreate)]
 #[endpoint="/"]
 #[table_name="events"]
 pub struct Event {
-    pub id: i32,
     pub timestamp: NaiveDateTime,
     pub body: Option<serde_json::Value>,
 }
 
-// Declare your forms here
-
-#[derive(Insertable, Serialize, Deserialize)]
-#[table_name="events"]
-pub struct EventForm {
-    pub timestamp: NaiveDateTime,
-    pub body: Option<serde_json::Value>,
-}
 
 #[catch(404)]
 fn not_found() -> JsonValue {
@@ -63,9 +54,10 @@ fn not_found() -> JsonValue {
     }))
 }
 
+
 fn main() {
     let server = rocket::ignite()
-        .mount("/", routes![event_create])
+        .mount("/", routes![event_create, event_get])
         .catch(catchers![not_found])
         .manage(init_pool());
     server.launch();
