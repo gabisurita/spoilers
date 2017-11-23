@@ -4,25 +4,28 @@
 extern crate chrono;
 #[macro_use] extern crate diesel;
 #[macro_use] extern crate diesel_codegen;
-#[macro_use] extern crate rocket;
-#[macro_use] extern crate rocket_contrib;
-#[macro_use] extern crate rocket_codegen;
+extern crate rocket;
+extern crate rocket_contrib;
 extern crate serde;
 #[macro_use] extern crate serde_derive;
 #[macro_use] extern crate serde_json;
-extern crate r2d2;
-extern crate r2d2_diesel;
-#[macro_use] extern crate spoilers;
+extern crate spoilers;
 #[macro_use] extern crate spoilers_derive;
+extern crate redis;
+
+use std::time::Duration;
 
 use diesel::*;
-use serde_json::Value;
-use rocket_contrib::{Json, JsonValue};
-
+use spoilers::*;
 use spoilers::models::*;
 use spoilers::storage::*;
 
 use chrono::NaiveDateTime;
+
+
+#[derive(RedshiftStorage)]
+pub struct Postgres {}
+
 
 
 // Declare your table types here
@@ -37,7 +40,7 @@ table! {
 
 // Declare your models here
 
-#[derive(Resource, PgStorageBackend, CollectionGet, CollectionCreate)]
+#[derive(Resource, RedshiftResourceStorage, CollectionGet, CollectionCreate)]
 #[endpoint="/"]
 #[table_name="events"]
 pub struct Event {
@@ -47,18 +50,26 @@ pub struct Event {
 
 
 #[catch(404)]
-fn not_found() -> JsonValue {
-    JsonValue(json!({
+fn not_found() -> rocket_contrib::JsonValue {
+    rocket_contrib::JsonValue(json!({
         "status": "error",
         "reason": "Resource was not found."
     }))
 }
 
 
+
+
+
 fn main() {
+    let server_pool = Postgres::init_pool();
     let server = rocket::ignite()
         .mount("/", routes![event_create, event_get])
         .catch(catchers![not_found])
-        .manage(init_pool());
+        .manage(Postgres::init_pool());
+
+
+    let async_pool = Postgres::init_pool();
+    Event::sync(async_pool, Duration::new(15*60, 0));
     server.launch();
 }
