@@ -16,6 +16,3 @@ pub extern crate r2d2_redis;
 pub mod models;
 pub mod storage;
 #[cfg(test)] mod tests;
-
-
-static DATABASE_URL: &'static str = env!("DATABASE_URL");

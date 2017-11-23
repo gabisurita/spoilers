@@ -417,10 +417,10 @@ fn impl_redshift_storage_backend(ast: &syn::DeriveInput) -> quote::Tokens {
     let table_name = config.table_name();
     let queue_name = config.table_name().as_ref().to_owned();
 
+    use std::time::Duration;
     quote! {
-        use std::time::Duration as LocalDuration;
         impl #struct_name {
-            pub fn sync(pool: ConnectionPool, period: LocalDuration) {
+            pub fn sync<'a>(pool: &'a ConnectionPool, period: Duration) {
                 use std::{thread, time};
                 use redis::Commands;
                 let db_conn = match pool.db_pool.get() {
