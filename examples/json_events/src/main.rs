@@ -20,7 +20,7 @@ use chrono::NaiveDateTime;
 use rocket_contrib::JsonValue;
 
 
-#[derive(PostgreStorage)]
+#[derive(RedshiftStorage)]
 pub struct Postgres {}
 
 
