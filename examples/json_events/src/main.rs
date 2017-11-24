@@ -17,6 +17,7 @@ use spoilers::models::*;
 use spoilers::storage::*;
 
 use chrono::NaiveDateTime;
+use rocket_contrib::JsonValue;
 
 
 #[derive(PostgreStorage)]
@@ -35,12 +36,29 @@ table! {
 
 // Declare your models here
 
-#[derive(Resource, PgResourceStorage, CollectionGet, CollectionCreate)]
-#[endpoint="/"]
+#[derive(Resource, PgResourceStorage)]
 #[table_name="events"]
 pub struct Event {
     pub timestamp: NaiveDateTime,
     pub body: Option<serde_json::Value>,
+}
+
+
+#[catch(404)]
+fn not_found() -> JsonValue {
+    JsonValue(json!({
+        "status": "error",
+        "reason": "Resource was not found."
+    }))
+}
+
+
+#[catch(400)]
+fn bad_request() -> JsonValue {
+    JsonValue(json!({
+        "status": "error",
+        "reason": "Resource was not found."
+    }))
 }
 
 

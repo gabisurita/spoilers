@@ -20,25 +20,21 @@ use utils::*;
 
 #[proc_macro_derive(Resource, attributes(endpoint))]
 pub fn derive_resource(input: TokenStream) -> TokenStream {
-    impl_resource(&parse_derive_input(input)).parse().unwrap()
-}
-
-
-#[proc_macro_derive(CollectionGet, attributes(endpoint))]
-pub fn derive_collection_get(input: TokenStream) -> TokenStream {
-    impl_collection_get(&parse_derive_input(input)).parse().unwrap()
-}
-
-
-#[proc_macro_derive(CollectionCreate, attributes(endpoint))]
-pub fn derive_collection_create(input: TokenStream) -> TokenStream {
-    impl_collection_create(&parse_derive_input(input)).parse().unwrap()
+    MetaResourceConfig::new(parse_derive_input(input)).impl_resource().parse().unwrap()
 }
 
 
 #[proc_macro_derive(PgResourceStorage, attributes(endpoint, table_name))]
 pub fn derive_pg_storage_backend(input: TokenStream) -> TokenStream {
-    impl_pg_storage_backend(&parse_derive_input(input)).parse().unwrap()
+    MetaResourceConfig::new(parse_derive_input(input)).impl_pg_storage_backend()
+                                                      .parse().unwrap()
+}
+
+
+#[proc_macro_derive(RedshiftResourceStorage, attributes(endpoint, ))]
+pub fn derive_redshift_storage_backend(input: TokenStream) -> TokenStream {
+    MetaResourceConfig::new(parse_derive_input(input)).impl_redshift_storage_backend()
+                                                      .parse().unwrap()
 }
 
 
@@ -51,10 +47,4 @@ pub fn derive_postgre_storage(input: TokenStream) -> TokenStream {
 #[proc_macro_derive(RedshiftStorage)]
 pub fn derive_redshift_storage(input: TokenStream) -> TokenStream {
     impl_redshift_storage(&parse_derive_input(input)).parse().unwrap()
-}
-
-
-#[proc_macro_derive(RedshiftResourceStorage, attributes(endpoint, ))]
-pub fn derive_redshift_storage_backend(input: TokenStream) -> TokenStream {
-    impl_redshift_storage_backend(&parse_derive_input(input)).parse().unwrap()
 }

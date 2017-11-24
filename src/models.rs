@@ -1,5 +1,4 @@
 pub trait Resource {
-    const ENDPOINT: &'static str;
 }
 
 
