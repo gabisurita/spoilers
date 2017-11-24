@@ -1,0 +1,21 @@
+db:
+  image: postgres
+  environment:
+    POSTGRES_USER: postgres
+    POSTGRES_PASSWORD: postgres
+
+redis:
+  image: redis
+
+web:
+  image: spoilers_redshift
+  links:
+   - db
+   - redis
+  ports:
+   - "8000:8000"
+  environment:
+     DATABASE_URL: "postgres://postgres:postgres@db"
+     REDIS_URL: "redis://redis"
+     ROCKET_ADDRESS: 0.0.0.0
+     ROCKET_LOG: "debug"
