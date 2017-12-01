@@ -20,21 +20,21 @@ use utils::*;
 
 #[proc_macro_derive(Resource, attributes(endpoint))]
 pub fn derive_resource(input: TokenStream) -> TokenStream {
-    MetaResourceConfig::new(parse_derive_input(input)).impl_resource().parse().unwrap()
+    MetaResource::new(parse_derive_input(input)).impl_resource().parse().unwrap()
 }
 
 
 #[proc_macro_derive(PgResourceStorage, attributes(endpoint, table_name))]
 pub fn derive_pg_storage_backend(input: TokenStream) -> TokenStream {
-    MetaResourceConfig::new(parse_derive_input(input)).impl_pg_storage_backend()
-                                                      .parse().unwrap()
+    MetaResource::new(parse_derive_input(input)).impl_pg_storage_backend()
+                                                .parse().unwrap()
 }
 
 
-#[proc_macro_derive(RedshiftResourceStorage, attributes(endpoint, ))]
+#[proc_macro_derive(RedshiftResourceStorage, attributes(endpoint, table_name))]
 pub fn derive_redshift_storage_backend(input: TokenStream) -> TokenStream {
-    MetaResourceConfig::new(parse_derive_input(input)).impl_redshift_storage_backend()
-                                                      .parse().unwrap()
+    MetaResource::new(parse_derive_input(input)).impl_redshift_storage_backend()
+                                                .parse().unwrap()
 }
 
 

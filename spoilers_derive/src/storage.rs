@@ -2,6 +2,46 @@ use syn;
 use quote;
 
 
+
+pub struct MetaContextManager {
+}
+
+impl MetaContextManager {
+    pub fn impl_unwrap_pg_conn(&self) -> quote::Tokens {
+        quote!{}
+    }
+
+    pub fn impl_unwrap_redis_conn(&self) -> quote::Tokens {
+        quote!{}
+    }
+
+    pub fn impl_unwarp_redshift_conn(&self) -> quote::Tokens {
+        quote!{}
+    }
+}
+
+
+pub struct MetaContext {
+}
+
+
+impl MetaContext {
+    pub fn impl_create_pg_conn(&self) -> quote::Tokens {
+        quote!{}
+    }
+
+    pub fn impl_create_redis_conn(&self) -> quote::Tokens {
+        quote!{}
+    }
+
+    pub fn impl_create_redshift_conn(&self) -> quote::Tokens {
+        quote!{}
+    }
+
+}
+
+
+
 pub fn impl_postgre_storage(ast: &syn::DeriveInput) -> quote::Tokens {
     let class_name = &ast.ident;
 
@@ -106,31 +146,6 @@ pub fn impl_redshift_storage(ast: &syn::DeriveInput) -> quote::Tokens {
                     }
                 };
                 rocket::Outcome::Success(Context{db: db_conn, queue: queue_conn})
-            }
-        }
-
-        impl #class_name {
-            /// Initializes a database pool.
-            pub fn init_pool() -> ConnectionPool {
-                use std::env;
-
-                let db_config = r2d2::Config::default();
-                let queue_config = r2d2::Config::default();
-
-                let database_url = env::var("DATABASE_URL").expect("DATABASE_URL must be set");
-                let queue_url = env::var("REDIS_URL").expect("REDIS_URL must be set");
-
-                let db_manager = r2d2_diesel::ConnectionManager::new(database_url);
-
-                let queue_manager = r2d2_redis::RedisConnectionManager::new(queue_url.as_ref())
-                    .expect("Redis connection failed");
-
-                ConnectionPool {
-                    db_pool: r2d2::Pool::new(db_config, db_manager)
-                                         .expect("db pool"),
-                    queue_pool: r2d2::Pool::new(queue_config, queue_manager)
-                                            .expect("redis pool"),
-                }
             }
         }
     }

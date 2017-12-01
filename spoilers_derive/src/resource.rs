@@ -6,15 +6,14 @@ use utils::parse_derive_attibutes;
 
 /// State composed of macro variables used as an util to generate
 /// macro implementations.
-pub struct MetaResourceConfig {
+pub struct MetaResource {
     pub ast: syn::DeriveInput,
 }
 
 
-impl MetaResourceConfig {
-
-    pub fn new(input: syn::DeriveInput) -> MetaResourceConfig {
-        MetaResourceConfig {ast: input}
+impl MetaResource {
+    pub fn new(input: syn::DeriveInput) -> Self {
+        Self {ast: input}
     }
 
     pub fn table_name(&self) -> syn::Ident {
@@ -89,13 +88,13 @@ impl MetaResourceConfig {
         let collection_create = self.impl_collection_create();
 
         quote! {
-            #[derive(Queryable, Serialize, Deserialize)]
+            #[derive(Queryable, Serialize, Deserialize, Debug)]
             pub struct #model_name {
                 pub id: i32,
                 #(#model_fields)*
             }
 
-            #[derive(Insertable, Serialize, Deserialize)]
+            #[derive(Insertable, Serialize, Deserialize, Debug)]
             #[table_name=#table_name]
             pub struct #form_name {
                 #(#form_fields)*
@@ -170,12 +169,12 @@ impl MetaResourceConfig {
                 }
 
                 fn bulk_create<'a>(&self, form: Vec<#form_name>) ->
-                        Result<#model_name, ResourceStorageError> {
+                        Result<(), ResourceStorageError> {
 
                     let created: #model_name = diesel::insert(&form).into(#table_name::table)
                         .get_result(&*self.db)
                         .expect("Error saving new post");
-                    Ok(created)
+                    Ok(())
                 }
 
                 fn list<'a>(&self, _filters: #filter_name) ->
@@ -218,7 +217,7 @@ impl MetaResourceConfig {
                         queue: queue_conn,
                     };
 
-                    let th = thread::spawn(move || {
+                    let _th = thread::spawn(move || {
                         loop {
                             let cached: Vec<String> = context.queue.lrange(#queue_name, 0, -1)
                                                                    .unwrap_or_default();
@@ -256,11 +255,13 @@ impl MetaResourceConfig {
                 }
 
                 fn bulk_create<'a>(&self, form: Vec<#form_name>) ->
-                        Result<#model_name, ResourceStorageError> {
-                    let created: #model_name = diesel::insert(&form).into(#table_name::table)
-                        .get_result(&*self.db)
-                        .expect("Error saving new post");
-                    Ok(created)
+                        Result<(), ResourceStorageError> {
+
+                    let location = "s3://spoilers-development/test-upload.txt".to_owned();
+                    let local = "/Users/gsurita/spoilers/test.csv".to_owned();
+                    let ingest = RedshiftIngest::new(&self.db);
+                    ingest.process(#queue_name.to_owned(), vec![]);
+                    Ok(())
                 }
 
                 fn list<'a>(&self, _filters: #filter_name) ->

@@ -20,7 +20,7 @@ use chrono::NaiveDateTime;
 use rocket_contrib::JsonValue;
 
 
-#[derive(PostgreStorage)]
+#[derive(RedshiftStorage)]
 pub struct Postgres {}
 
 
@@ -29,7 +29,7 @@ pub struct Postgres {}
 table! {
     events {
         id -> Integer,
-        timestamp -> Timestamp,
+        timestamp -> Nullable<Timestamp>,
         body -> Nullable<Jsonb>,
     }
 }
@@ -39,7 +39,7 @@ table! {
 #[derive(Resource, PgResourceStorage)]
 #[table_name="events"]
 pub struct Event {
-    pub timestamp: NaiveDateTime,
+    pub timestamp: Option<NaiveDateTime>,
     pub body: Option<serde_json::Value>,
 }
 
@@ -63,6 +63,7 @@ fn bad_request() -> JsonValue {
 
 
 // Declare your routes here
+
 
 fn main() {
     let server_pool = Postgres::init_pool();
