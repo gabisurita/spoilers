@@ -29,7 +29,6 @@ pub trait ResourceStorage<Form, Model, Filters>{
 
 
 pub struct RedshiftIngest<'a> {
-    pub base_bucket: String,
     pub acl: Option<String>,
     s3_client: S3Client<DefaultCredentialsProvider, hyper::Client>,
     pg_client: &'a diesel::pg::PgConnection,
@@ -39,8 +38,7 @@ pub struct RedshiftIngest<'a> {
 impl<'a> RedshiftIngest<'a> {
     pub fn new(pg_client: &'a diesel::pg::PgConnection) -> Self {
         Self {
-            base_bucket: "".to_owned(),
-            acl: Some("".to_owned()),
+            acl: Some("public-read".to_owned()),
             s3_client: S3Client::new(default_tls_client().unwrap(),
                                      DefaultCredentialsProvider::new().unwrap(),
                                      Region::UsEast1),
@@ -48,20 +46,17 @@ impl<'a> RedshiftIngest<'a> {
         }
     }
 
-    pub fn upload_to_s3(&self, path: String, stream: Vec<u8>) -> Result<String, ()> {
-        let path_split: Vec<&str> = path.split("/").collect();
-
-        let file_name = path_split[path_split.len() - 1];
-        let base_path = path_split[0..path_split.len() - 1].join("");
+    pub fn upload_to_s3(&self, s3_path: String, stream: Vec<u8>) -> Result<String, ()> {
+        let file_name = "0.csv".to_owned();
 
         let result = self.s3_client.put_object(&PutObjectRequest {
             acl: self.acl.clone(),
             body: Some(stream),
-            bucket: format!("{}/{}", self.base_bucket.to_owned(), base_path),
+            bucket: s3_path.clone(),
             key: file_name.to_owned(),
             ..Default::default()
         });
-        Ok(format!("{}/{}", self.base_bucket, file_name).to_owned())
+        Ok(format!("{}/{}", s3_path, file_name).to_owned())
 
     }
 
@@ -70,18 +65,20 @@ impl<'a> RedshiftIngest<'a> {
         let credentials = DefaultCredentialsProvider::new().unwrap().credentials().unwrap();
         let key = credentials.aws_access_key_id();
         let secret = credentials.aws_secret_access_key();
-        let credentials = format!("credentials aws_secret_access_key={};aws_secret_access_key={}", key, secret);
-        let query = diesel::expression::dsl::sql::<diesel::types::Bool>(
-            format!("copy {} from '{}' {} csv;", table_name, location, credentials).as_str()
-        );
+        let credentials = format!("credentials 'aws_access_key_id={};aws_secret_access_key={}'", key, secret);
+        let command = format!("copy {} from '{}' {} csv;", table_name, location, credentials);
+        println!("{}", command);
+	let query = diesel::expression::dsl::sql::<diesel::types::Bool>(
+            command.as_str()
+	);
         match query.execute(&*self.pg_client) {
             Ok(count) => Ok(count),
-            Err(_) => Err(()),
+            Err(e) => {println!("{:?}", e); Err(())},
         }
     }
 
-    pub fn process(&self, table_name: String, stream: Vec<u8>) {
-        let uploaded_file = self.upload_to_s3(format!("{}/{}", table_name, "0.csv"), stream)
+    pub fn process(&self, table_name: String, base_path: String, stream: Vec<u8>) {
+        let uploaded_file = self.upload_to_s3(base_path, stream)
                                 .expect("Failed to upload to S3.");
         let ingested = self.ingest_from_s3(table_name, uploaded_file)
                            .expect("Failed to ingest to Redshift.");

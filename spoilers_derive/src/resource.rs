@@ -256,11 +256,12 @@ impl MetaResource {
 
                 fn bulk_create<'a>(&self, form: Vec<#form_name>) ->
                         Result<(), ResourceStorageError> {
-
-                    let location = "s3://spoilers-development/test-upload.txt".to_owned();
-                    let local = "/Users/gsurita/spoilers/test.csv".to_owned();
                     let ingest = RedshiftIngest::new(&self.db);
-                    ingest.process(#queue_name.to_owned(), vec![]);
+                    ingest.process(
+			#queue_name.to_owned(),
+			format!("{}/{}", "spoilers-development", #queue_name.to_owned()),
+			 vec![]
+		    );
                     Ok(())
                 }
 

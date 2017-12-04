@@ -1,5 +1,5 @@
 CREATE TABLE log_level_warning (
-    id          SERIAL PRIMARY KEY,
+    id          IDENTITY(1,1),
     timestamp   TIMESTAMP,
     user_id     INTEGER,
     title       VARCHAR(64),
@@ -7,7 +7,7 @@ CREATE TABLE log_level_warning (
 );
 
 CREATE TABLE log_level_critical (
-    id          SERIAL PRIMARY KEY,
+    id          IDENTITY(1,1),
     timestamp   TIMESTAMP,
     user_id     INTEGER,
     title       VARCHAR(64),
