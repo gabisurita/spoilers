@@ -47,7 +47,7 @@ impl<'a> RedshiftIngest<'a> {
     }
 
     pub fn upload_to_s3(&self, s3_path: String, stream: Vec<u8>) -> Result<String, ()> {
-        let file_name = "0.csv".to_owned();
+        let file_name = "1.csv".to_owned();
 
         let result = self.s3_client.put_object(&PutObjectRequest {
             acl: self.acl.clone(),

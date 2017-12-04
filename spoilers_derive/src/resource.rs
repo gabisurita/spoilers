@@ -242,6 +242,7 @@ impl MetaResource {
 
                 fn create<'a>(&self, form: #form_name) ->
                         Result<#model_name, ResourceStorageError> {
+
                     use redis::Commands;
                     let serialized: String = serde_json::to_string(&form).unwrap();
                     let _: i32 = self.queue.rpush(#queue_name, serialized.clone()).unwrap();
@@ -256,12 +257,27 @@ impl MetaResource {
 
                 fn bulk_create<'a>(&self, form: Vec<#form_name>) ->
                         Result<(), ResourceStorageError> {
+
+                    use csv::WriterBuilder;
+                    use redis::Commands;
+                    let mut writer = WriterBuilder::new().has_headers(false)
+                                                         .from_writer(vec![]);
+
+                    let cached: Vec<String> = self.queue.lrange(#queue_name, 0, -1).unwrap();
+                    let results: Vec<#form_name> = cached.iter().map(|s| {
+                        let mut model_json: serde_json::Value =
+                            serde_json::from_str(s.as_ref()).unwrap();
+                        let deserialized: #form_name =
+                            serde_json::from_value(model_json).unwrap();
+                        writer.serialize(deserialized);
+                        serde_json::from_str(s.as_ref()).unwrap()
+                    }).collect();
+
                     let ingest = RedshiftIngest::new(&self.db);
-                    ingest.process(
-			#queue_name.to_owned(),
-			format!("{}/{}", "spoilers-development", #queue_name.to_owned()),
-			 vec![]
-		    );
+                    let table_name = #queue_name.to_owned();
+                    let base_path = format!("spoilers-development/{}", #queue_name);
+                    println!("{:?}", results);
+                    ingest.process(table_name, base_path, writer.into_inner().unwrap());
                     Ok(())
                 }
 

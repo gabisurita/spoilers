@@ -116,9 +116,6 @@ pub struct Error {
 // Declare your routes here and syncs
 
 fn main() {
-    let credentials = DefaultCredentialsProvider::new().unwrap();
-    println!("{:#?}", credentials.credentials());
-
     let client = S3Client::new(default_tls_client().unwrap(),
                                DefaultCredentialsProvider::new().unwrap(),
                                Region::UsEast1);
